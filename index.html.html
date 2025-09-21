@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Demo Shop — GTM + GA4</title>
+  <!-- ИНИЦИАЛИЗАЦИЯ dataLayer (важно сделать до GTM HEAD) -->
+  <script>window.dataLayer = window.dataLayer || [];</script>
+  <!-- GTM_HEAD_SNIPPET -->
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:16px}
+    .products{display:flex;gap:12px;flex-wrap:wrap}
+    .card{border:1px solid #ddd;padding:12px;width:220px}
+    button{background:#2b7ae4;color:#fff;border:none;padding:8px 10px;cursor:pointer}
+    .cart{position:fixed;right:16px;top:16px;background:#fff;border:1px solid #ddd;padding:10px}
+  </style>
+</head>
+<body>
+  <!-- GTM_BODY_SNIPPET -->
+  <h1>Demo Shop: BTS merch (тест)</h1>
+  <div class="products" id="products"></div>
+
+  <div class="cart" id="cart">
+    <strong>Cart</strong>
+    <div id="cartItems">(пусто)</div>
+    <div id="cartTotal"></div>
+    <button id="checkoutBtn">Begin checkout</button>
+  </div>
+
+  <script>
+    // === ТЕСТОВЫЕ ТОВАРЫ (редактируй как хочешь) ===
+    const products = [
+      {item_id:'bts-shirt-1', item_name:'BTS Shirt - Black', price:499, currency:'UAH', item_brand:'WizardGifts', item_category:'Clothing'},
+      {item_id:'bts-mug-1', item_name:'BTS Mug - Logo', price:199, currency:'UAH', item_brand:'WizardGifts', item_category:'Home'},
+      {item_id:'bts-poster-1', item_name:'BTS Poster - Group', price:149, currency:'UAH', item_brand:'WizardGifts', item_category:'Decor'}
+    ];
+
+    // Рендер карточек
+    const container = document.getElementById('products');
+    products.forEach(p=>{
+      const card = document.createElement('div'); card.className='card';
+      card.innerHTML = `<h3>${p.item_name}</h3><div>Цена: ${p.price} ${p.currency}</div><div style="margin:8px 0"><button data-id="${p.item_id}" class="view">View</button> <button data-id="${p.item_id}" class="add">Add to cart</button></div>`;
+      container.appendChild(card);
+    });
+
+    // Простая корзина в localStorage
+    function getCart(){return JSON.parse(localStorage.getItem('demo_cart')||'[]')}
+    function saveCart(c){localStorage.setItem('demo_cart', JSON.stringify(c))}
+    function renderCart(){
+      const c = getCart();
+      const el = document.getElementById('cartItems');
+      el.innerHTML = c.length? c.map(i=>`<div>${i.item_name} x${i.quantity}</div>`).join('') : '(пусто)';
+      const total = c.reduce((s,i)=>s + i.price*i.quantity,0);
+      document.getElementById('cartTotal').innerText = total? ('Total: '+ total + ' UAH') : '';
+    }
+
+    // helper: find product
+    function findProduct(id){return products.find(p=>p.item_id===id)}
+
+    // Пушим событие view_item_list при загрузке (имитация просмотра каталога)
+    document.addEventListener('DOMContentLoaded', function(){
+      window.dataLayer.push({
+        event: 'view_item_list',
+        ecommerce: { items: products.map(p=>({item_id:p.item_id, item_name:p.item_name, price:p.price, currency:p.currency, item_brand:p.item_brand, item_category:p.item_category})) }
+      });
+      renderCart();
+    });
+
+    // Обработчики кнопок
+    document.body.addEventListener('click', function(e){
+      if(e.target.classList.contains('view')){
+        const id = e.target.getAttribute('data-id'); const p = findProduct(id);
+        window.dataLayer.push({ event:'view_item', ecommerce:{ items:[{item_id:p.item_id, item_name:p.item_name, price:p.price, currency:p.currency, item_brand:p.item_brand, item_category:p.item_category}] } });
+        alert('view_item pushed for '+p.item_name);
+      }
+      if(e.target.classList.contains('add')){
+        const id = e.target.getAttribute('data-id'); const p = findProduct(id);
+        const cart = getCart();
+        const existing = cart.find(i=>i.item_id===p.item_id);
+        if(existing) existing.quantity += 1; else cart.push({...p, quantity:1});
+        saveCart(cart); renderCart();
+        window.dataLayer.push({ event:'add_to_cart', ecommerce:{ items:[{item_id:p.item_id, item_name:p.item_name, price:p.price, currency:p.currency, item_brand:p.item_brand, item_category:p.item_category, quantity:1}], value:p.price }});
+        alert('add_to_cart pushed for '+p.item_name);
+      }
+    });
+
+    document.getElementById('checkoutBtn').addEventListener('click', function(){
+      const cart = getCart();
+      if(!cart.length){alert('Корзина пустая'); return}
+      const value = cart.reduce((s,i)=>s + i.price*i.quantity,0);
+      window.dataLayer.push({ event:'begin_checkout', ecommerce:{ items: cart.map(i=>({item_id:i.item_id, item_name:i.item_name, price:i.price, currency:i.currency, item_brand:i.item_brand, item_category:i.item_category, quantity:i.quantity})), value: value }});
+      alert('begin_checkout pushed — проверь GTM Preview и GA4 DebugView');
+      // Для демонстрации очистим корзину
+      localStorage.removeItem('demo_cart'); renderCart();
+    });
+  </script>
+</body>
+</html>
