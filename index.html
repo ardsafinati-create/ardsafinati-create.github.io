@@ -1,1 +1,147 @@
-<!doctype html><meta charset="utf-8"><title>test</title>Hello
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Demo Shop — BTS merch (тест)</title>
+  <!-- ИНИЦИАЛИЗАЦИЯ dataLayer (важно сделать до GTM HEAD) -->
+  <script>window.dataLayer = window.dataLayer || [];</script>
+  <!-- GTM_HEAD_SNIPPET --> 
+  <!-- Google Tag Manager -->
+<script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-WTH69FR9');</script>
+<!-- End Google Tag Manager --> 
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;margin:16px;background:#fafafa}
+    h1{text-align:center;color:#333}
+    .products{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+    .card{border:1px solid #ddd;padding:12px;width:220px;background:#fff;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.06)}
+    .card img{width:100%;height:140px;object-fit:cover;border-radius:6px}
+    .price{font-weight:bold;margin-top:8px}
+    button{background:#a83279;color:#fff;border:none;padding:8px 10px;cursor:pointer;border-radius:6px}
+    .cart{position:fixed;right:16px;top:16px;background:#fff;border:1px solid #ddd;padding:12px;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.06);width:260px}
+    .cart h3{margin:0 0 8px 0}
+    .cart-list{max-height:240px;overflow:auto;margin-bottom:8px;padding:0 0 8px 0}
+    .cart-list li{list-style:none;padding:6px 0;border-bottom:1px solid #f1f1f1}
+    .checkout-btn{background:#2b7ae4;color:#fff;padding:8px;border-radius:6px;border:none;width:100%;cursor:pointer}
+  </style>
+</head>
+<body>
+  <!-- GTM_BODY_SNIPPET -->
+  <!-- Google Tag Manager (noscript) -->
+<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WTH69FR9"
+height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+<!-- End Google Tag Manager (noscript) -->
+  <h1>Demo Shop — BTS атрибутика (тест)</h1>
+  <p style="text-align:center">Цей тестовий магазин зроблено для практики налаштувань Google Tag Manager і GA4. Кнопки пушать dataLayer події.</p>
+
+  <div class="products" id="products"></div>
+
+  <div class="cart" id="cart">
+    <h3>Кошик</h3>
+    <ul id="cartItems" class="cart-list">(пусто)</ul>
+    <div><strong>Сума:</strong> <span id="cartTotal">0</span> грн</div>
+    <br>
+    <button id="beginCheckout" class="checkout-btn">Begin checkout</button>
+  </div>
+
+  <script>
+    // === Список товарів згідно скриншоту ===
+    const products = [
+      {item_id:'notebook-bts', item_name:'Блокнот BTS', price:295, currency:'UAH', item_brand:'WizardGifts', item_category:'Stationery', image:''},
+      {item_id:'stickerpack-bts', item_name:'Стікерпак BTS', price:225, currency:'UAH', item_brand:'WizardGifts', item_category:'Stickers', image:''},
+      {item_id:'mug-bts', item_name:'Чашка BTS', price:380, currency:'UAH', item_brand:'WizardGifts', item_category:'Home', image:''},
+      {item_id:'poster1-bts', item_name:'Постер №1 BTS Art', price:215, currency:'UAH', item_brand:'WizardGifts', item_category:'Posters', image:''},
+      {item_id:'poster2-bts', item_name:'Постер №2 Учасники BTS', price:215, currency:'UAH', item_brand:'WizardGifts', item_category:'Posters', image:''},
+      {item_id:'postcard-bts', item_name:'Листівка BTS', price:65, currency:'UAH', item_brand:'WizardGifts', item_category:'Postcards', image:''}
+    ];
+
+    // Рендер карточек
+    const container = document.getElementById('products');
+    products.forEach(p=>{
+      const el = document.createElement('div');
+      el.className = 'card';
+      el.innerHTML = `
+        <img src="https://via.placeholder.com/400x300?text=${encodeURIComponent(p.item_name)}" alt="${p.item_name}">
+        <h3>${p.item_name}</h3>
+        <div class="price">${p.price} грн</div>
+        <div style="margin-top:8px"><button data-id="${p.item_id}" class="view">View</button> <button data-id="${p.item_id}" class="add">Add to cart</button></div>
+      `;
+      container.appendChild(el);
+    });
+
+    // Простейша корзина
+    function getCart(){ return JSON.parse(localStorage.getItem('demo_cart')||'[]'); }
+    function saveCart(c){ localStorage.setItem('demo_cart', JSON.stringify(c)); }
+    function renderCart(){
+      const c = getCart();
+      const list = document.getElementById('cartItems');
+      list.innerHTML = '';
+      if(c.length===0){ list.innerHTML='(пусто)'; document.getElementById('cartTotal').innerText = '0'; return; }
+      let total = 0;
+      c.forEach(item=>{
+        const li = document.createElement('li');
+        li.innerText = `${item.item_name} x${item.quantity} — ${item.price * item.quantity} грн`;
+        list.appendChild(li);
+        total += item.price * item.quantity;
+      });
+      document.getElementById('cartTotal').innerText = total;
+    }
+
+    function findProduct(id){ return products.find(p=>p.item_id===id); }
+
+    // При завантаженні пушим view_item_list
+    document.addEventListener('DOMContentLoaded', ()=>{
+      window.dataLayer.push({
+        event: 'view_item_list',
+        ecommerce: {
+          items: products.map(p=>({item_id:p.item_id, item_name:p.item_name, price:p.price, currency:p.currency, item_brand:p.item_brand, item_category:p.item_category}))
+        }
+      });
+      renderCart();
+    });
+
+    // Обработчики кнопок
+    document.body.addEventListener('click', function(e){
+      if(e.target.classList.contains('view')){
+        const id = e.target.getAttribute('data-id');
+        const p = findProduct(id);
+        window.dataLayer.push({
+          event: 'view_item',
+          ecommerce: { items: [{ item_id: p.item_id, item_name: p.item_name, price: p.price, currency: p.currency, item_brand: p.item_brand, item_category: p.item_category }] }
+        });
+        alert('view_item відправлено: ' + p.item_name);
+      }
+      if(e.target.classList.contains('add')){
+        const id = e.target.getAttribute('data-id');
+        const p = findProduct(id);
+        const cart = getCart();
+        const ex = cart.find(i=>i.item_id===p.item_id);
+        if(ex) ex.quantity += 1; else cart.push({...p, quantity:1});
+        saveCart(cart); renderCart();
+        window.dataLayer.push({
+          event: 'add_to_cart',
+          ecommerce: { items: [{ item_id: p.item_id, item_name: p.item_name, price: p.price, currency: p.currency, item_brand: p.item_brand, item_category: p.item_category, quantity: 1 }], value: p.price }
+        });
+        alert('add_to_cart відправлено: ' + p.item_name);
+      }
+    });
+
+    document.getElementById('beginCheckout').addEventListener('click', function(){
+      const cart = getCart();
+      if(!cart.length){ alert('Кошик порожній'); return; }
+      const value = cart.reduce((s,i)=>s + i.price*i.quantity, 0);
+      window.dataLayer.push({
+        event: 'begin_checkout',
+        ecommerce: { items: cart.map(i=>({ item_id: i.item_id, item_name: i.item_name, price: i.price, currency: i.currency, item_brand: i.item_brand, item_category: i.item_category, quantity: i.quantity })), value: value }
+      });
+      alert('begin_checkout відправлено — перевірте GTM Preview і GA4 DebugView');
+      // Для демонстрації очищаем корзину
+      localStorage.removeItem('demo_cart'); renderCart();
+    });
+  </script>
+</body>
+</html>
